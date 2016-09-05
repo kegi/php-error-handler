@@ -78,35 +78,35 @@ hasDebug() : bool
 ```
 
 ##Strict mode
-Set/unset strict mode. with strict mode enabled, non-fatal php error (such as E_NOTICE) generate a fatal error. (default: **false**)
+Set/unset strict mode. With strict mode enabled, non-fatal php error (such as E_NOTICE) now generates fatal error. (default: **false**)
 ```
 setStrict(bool $strict)
 isStrict() : bool
 ```
 
-#errorCallback
-Set/unset error callback. This will be call for every single php non-fatal error. **Most project don't need this.**. Any input returned will be printed.
+##errorCallback
+Set/unset error callback. This will be call for every single php non-fatal error. **Most project don't need this.**
 ```
 setErrorCallback([mixed $callable])
 getErrorCallback() : mixed
 ```
 
-#fatalErrorCallback
+##fatalErrorCallback
 Set/unset fatal error callback. This will be call in case of a fatal error. You can print or return your input.
 ```
 setFatalErrorCallback([mixed $callable])
 getFatalErrorCallback() : mixed
 ```
 
-#unrecoverableErrorCallback
-Set/unset fatal error callback. This will be call in case of a fatal error from "**fatalErrorCallback**". You can print or return your input.
+##unrecoverableErrorCallback
+Set/unset fatal error callback. This will be call in case of a fatal error from "**fatalErrorCallback**" or if don't have a fatal error callback defined. You can print or return your input.
 ```
 setUnrecoverableErrorCallback([mixed $callable])
 getUnrecoverableErrorCallback() : mixed
 ```
 
-#Error Logger
-Set/unset error logger. ErrorLogger need to implement PSR Logger interface. Note: Logs are enabled with or without debug mode enabled.
+##Error Logger
+Set/unset error logger. ErrorLogger need to implement PSR Logger interface. Note: Logs are enabled with or without debug mode.
 ```
 setErrorLogger([LoggerInterface $errorLogger])
 getErrorLogger() : mixed
