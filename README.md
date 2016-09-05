@@ -25,10 +25,9 @@ PhpErrorHandler is able to detect a fatal error while handling another fatal err
 
 <?php
 
-namespace Your\Project;
+namespace Your\Project\Bootstrap;
 
 use KeGi\PhpErrorHandler\PhpErrorHandler;
-use KeGi\PhpErrorHandler\PhpErrorException;
 use KeGi\PhpErrorHandler\PhpFatalErrorException;
 
 class App
@@ -47,14 +46,16 @@ class App
     
     public function run()
     {
-        //run your application normally
-        //uncaught exception will be handled on "handleFatalError"
+        //run your application...
     }
     
     public function handleFatalError(PhpFatalErrorException $phpFatalErrorException)
     {
-        //call your error controller and render an error page normally
-        //if an error occures on this method, the content of "handleUnrecoverableError" will be displayed
+        //php fatal error detected (such as uncaugh exception...)
+        
+        //call your error controller and render an error page
+        //if an error occures while rendering the error page, the content of
+        //"handleUnrecoverableError" will be displayed
     }
     
     public function handleUnrecoverableError()
@@ -66,6 +67,49 @@ class App
     }
 }
 
+```
+
+#Parameters
+##Debug mode
+Set/unset debug mode, *see workflow below*. (default: **false**)
+```
+setDebug(bool $debug)
+hasDebug() : bool
+```
+
+##Strict mode
+Set/unset strict mode. with strict mode enabled, non-fatal php error (such as E_NOTICE) generate a fatal error. (default: **false**)
+```
+setStrict(bool $strict)
+isStrict() : bool
+```
+
+#errorCallback
+Set/unset error callback. This will be call for every single php non-fatal error. **Most project don't need this.**. Any input returned will be printed.
+```
+setErrorCallback([mixed $callable])
+getErrorCallback() : mixed
+```
+
+#fatalErrorCallback
+Set/unset fatal error callback. This will be call in case of a fatal error. You can print or return your input.
+```
+setFatalErrorCallback([mixed $callable])
+getFatalErrorCallback() : mixed
+```
+
+#unrecoverableErrorCallback
+Set/unset fatal error callback. This will be call in case of a fatal error from "**fatalErrorCallback**". You can print or return your input.
+```
+setUnrecoverableErrorCallback([mixed $callable])
+getUnrecoverableErrorCallback() : mixed
+```
+
+#Error Logger
+Set/unset error logger. ErrorLogger need to implement PSR Logger interface. Note: Logs are enabled with or without debug mode enabled.
+```
+setErrorLogger([LoggerInterface $errorLogger])
+getErrorLogger() : mixed
 ```
 
 #workflow
