@@ -4,7 +4,6 @@ namespace KeGi\PhpErrorHandler;
 
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
-use Exception;
 use Throwable;
 
 /**
@@ -38,6 +37,10 @@ use Throwable;
  *  - in case of a second fatal error, the previously generated content is
  *    dismissed and a final error message is display
  *
+ * if strict is set to true :
+ *
+ *  - all non-fatal errors trigger an exception
+ *
  */
 class PhpErrorHandler
 {
@@ -68,6 +71,11 @@ class PhpErrorHandler
     private $debug;
 
     /**
+     * @var bool
+     */
+    private $strict;
+
+    /**
      * @var LoggerInterface|null
      */
     private $errorLogger;
@@ -79,6 +87,7 @@ class PhpErrorHandler
 
     /**
      * @param bool                 $debug
+     * @param bool                 $strict
      * @param callable|null        $errorCallback
      * @param callable|null        $fatalErrorCallback
      * @param callable|null        $unrecoverableErrorCallback
@@ -87,6 +96,7 @@ class PhpErrorHandler
      */
     public function __construct(
         bool $debug = false,
+        bool $strict = false,
         $errorCallback = null,
         $fatalErrorCallback = null,
         $unrecoverableErrorCallback = null,
@@ -144,6 +154,26 @@ class PhpErrorHandler
     public function setDebug(bool $debug)
     {
         $this->debug = $debug;
+
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isStrict(): bool
+    {
+        return $this->strict;
+    }
+
+    /**
+     * @param bool $strict
+     *
+     * @return $this
+     */
+    public function setStrict(bool $strict)
+    {
+        $this->strict = $strict;
 
         return $this;
     }
@@ -255,6 +285,20 @@ class PhpErrorHandler
     ) : bool
     {
 
+        /*if strict mode is enabled, non-fatal error are converted in fatal error*/
+
+        if ($this->isStrict()) {
+
+            $errorString = $this->formatErrorString(
+                $errorType,
+                $errorMessage,
+                $errorFile,
+                $errorLine
+            );
+
+            trigger_error('[STRICT MODE] ' . $errorString, E_USER_ERROR);
+        }
+
         /*log error if logger is available*/
 
         if ($this->getErrorLogger() instanceof LoggerInterface) {
@@ -280,7 +324,10 @@ class PhpErrorHandler
 
             $handlerResponse = call_user_func(
                 $this->getErrorCallback(),
-                new Exception($errorString)
+                new PhpErrorException(
+                    $errorString,
+                    $errorType
+                )
             );
 
             if ($handlerResponse === true) {
@@ -344,6 +391,12 @@ class PhpErrorHandler
 
         if (is_callable($this->getFatalErrorCallback())) {
 
+            if (!$this->hasDebug()) {
+                ob_start(function () {
+                    null;
+                });
+            }
+
             $errorString = $this->formatErrorString(
                 $errorType,
                 $errorMessage,
@@ -351,15 +404,12 @@ class PhpErrorHandler
                 $errorLine
             );
 
-            if (!$this->hasDebug()) {
-                ob_start(function () {
-                    null;
-                });
-            }
-
             $handlerResponse = call_user_func(
                 $this->fatalErrorCallback,
-                new Exception($errorString)
+                new PhpFatalErrorException(
+                    $errorString,
+                    $errorType
+                )
             );
 
             if (!$this->hasDebug()) {
