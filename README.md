@@ -67,3 +67,6 @@ class App
 }
 
 ```
+
+#workflow
+![alt tag](https://raw.githubusercontent.com/kegi/php-error-handler/master/docs/workflow.png)
