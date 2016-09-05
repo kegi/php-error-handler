@@ -69,9 +69,12 @@ class App
 
 ```
 
+#workflow
+![alt tag](https://raw.githubusercontent.com/kegi/php-error-handler/master/docs/workflow.png)
+
 #Parameters
 ##Debug mode
-Set/unset debug mode, *see workflow below*. (default: **false**)
+Set/unset debug mode, *see workflow above*. (default: **false**)
 ```
 setDebug(bool $debug)
 hasDebug() : bool
@@ -111,6 +114,3 @@ Set/unset error logger. ErrorLogger need to implement PSR Logger interface. Note
 setErrorLogger([LoggerInterface $errorLogger])
 getErrorLogger() : mixed
 ```
-
-#workflow
-![alt tag](https://raw.githubusercontent.com/kegi/php-error-handler/master/docs/workflow.png)
