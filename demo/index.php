@@ -1,45 +1,44 @@
 <?php
 
+use KeGi\PhpErrorHandler\PhpErrorException;
 use KeGi\PhpErrorHandler\PhpErrorHandler;
+use KeGi\PhpErrorHandler\PhpFatalErrorException;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
 error_reporting(-1);
 ini_set('display_errors', 'On');
 
-/*toggle $debug to test dev / prod behiavor*/
-
-$debug = true;
-
 /*instanciate the php error handler*/
 
-$phpErrorHandler = new PhpErrorHandler(
-    $debug,
-    null, //errorHandler
-    null, //fatalErrorHandler
-    'unrecoverableErrorHandler' //unrecoverableErrorHandler
-);
+(new PhpErrorHandler())
+    ->setDebug(false) //prod = false
+    ->setStrict(false) //prod = false
+    ->setErrorCallback('errorHandler')
+    ->setFatalErrorCallback('fatalErrorHandler')
+    ->setUnrecoverableErrorCallback('unrecoverableErrorHandler');
 
 /*******************/
 /* error callbacks */
 /*******************/
 
-function errorHandler(Throwable $throwable)
+function errorHandler(PhpErrorException $errorException)
 {
     /* In most case, you won't need this callback. The errors are already loggued */
 
     echo '<div style="padding:5px; margin:10px 0; background-color:#ffb88a; color:#ff6312;">';
-    echo 'Callback : PHP Error catched : ' . $throwable->getMessage();
+    echo 'Callback : PHP Error catched : ' . $errorException->getMessage();
     echo '</div>';
 }
 
-function fatalErrorHandler(Throwable $throwable)
+function fatalErrorHandler(PhpFatalErrorException $fatalErrorException)
 {
 
     /*here, you could call your errorController and try to generate a response*/
 
     echo '<div style="padding:5px; margin:10px 0; background-color:#ff6312; color:#fff;">';
-    echo 'Callback : PHP Fatal Error catched : ' . $throwable->getMessage();
+    echo 'Callback : PHP Fatal Error catched : '
+        . $fatalErrorException->getMessage();
     echo '</div>';
 
     /*any non-fatal error at that level are loggued and dismiss*/
