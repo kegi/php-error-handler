@@ -112,8 +112,14 @@ The errors on command line will also be handled.
 #workflow
 ![alt tag](https://raw.githubusercontent.com/kegi/php-error-handler/master/docs/workflow.png)
 
-#Parameters
+#Output buffering
+It's a good practice to build a response object and to emit it when ready, most php router do that. If your project generate content directly (eg. echo, print, var_dump...), this will also be handled.
 
+If a fatal error occured with debug mode disabled, the content already generated will be dismiss so only our error response is visible.
+
+On the error callbacks, you can echo directly your message or return a string.
+
+#Parameters
 ##Constructor
 If you don't want the library to changed php errors settings (ini_set and error_reporting), set **$setErrorDisplay** to false on the constructor.
 ```
