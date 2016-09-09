@@ -21,11 +21,11 @@ use Throwable;
  *                                  occured while handling a fatal error.
  *
  * If an errorLogger is provided, all PHP Errors will be loggued with the
- * correct level or error.
+ * correct level of error.
  *
  * if debug is set to true :
  *
- *  - error are displayed normally
+ *  - errors are displayed normally
  *  - unrecoverableErrorCallback will never be called
  *  - other error callbacks are called the same way
  *
@@ -39,7 +39,7 @@ use Throwable;
  *
  * if strict is set to true :
  *
- *  - all non-fatal errors trigger an exception
+ *  - all non-fatal errors trigger a fatal error (E_USER_ERROR)
  *
  */
 class PhpErrorHandler
@@ -47,6 +47,7 @@ class PhpErrorHandler
 
     /**
      * Default message to display if an error occured while handling a fatal error
+     * This message is used in case there is no unrecoverableErrorCallback defined
      */
     const DEFAULT_UNRECOVERABLE_ERROR_MESSAGE = 'An error occured, please try again later.';
 
@@ -68,12 +69,17 @@ class PhpErrorHandler
     /**
      * @var bool
      */
-    private $debug;
+    private $debug = false;
 
     /**
      * @var bool
      */
-    private $strict;
+    private $strict = false;
+
+    /**
+     * @var bool
+     */
+    private $setDisplayErrors = true;
 
     /**
      * @var LoggerInterface|null
@@ -83,7 +89,17 @@ class PhpErrorHandler
     /**
      * @var bool
      */
+    private $isCancelled = false;
+
+    /**
+     * @var bool
+     */
     private $isShuttingDown = false;
+
+    /**
+     * @var string|null
+     */
+    private $previousErrorLogSettings;
 
     /**
      * @param bool                 $debug
@@ -92,7 +108,7 @@ class PhpErrorHandler
      * @param callable|null        $fatalErrorCallback
      * @param callable|null        $unrecoverableErrorCallback
      * @param LoggerInterface|null $errorLogger
-     * @param bool                 $setDisplayError
+     * @param bool                 $setDisplayErrors
      */
     public function __construct(
         bool $debug = false,
@@ -101,27 +117,24 @@ class PhpErrorHandler
         $fatalErrorCallback = null,
         $unrecoverableErrorCallback = null,
         $errorLogger = null,
-        bool $setDisplayError = true
+        bool $setDisplayErrors = true
     ) {
 
-        ob_start();
+        if ($this->hasOutputBuffer()) {
+            ob_start();
+        }
 
         $this->setDebug($debug);
+        $this->setStrict($strict);
         $this->setErrorCallback($errorCallback);
         $this->setFatalErrorCallback($fatalErrorCallback);
         $this->setUnrecoverableErrorCallback($unrecoverableErrorCallback);
         $this->setErrorLogger($errorLogger);
+        $this->setDisplayErrors($setDisplayErrors);
 
-        if ($setDisplayError) {
-            if ($debug === true) {
-                ini_set('display_errors', 'On');
-                error_reporting(-1);
-            } else {
-                ini_set('display_errors', 'Off');
-            }
-        }
+        $this->configureDisplayErrors();
 
-        /*set errors handlers with closure to keep methods private*/
+        /*set errors handlers with closure to keep methods privates*/
 
         set_error_handler(function (
             $errorType,
@@ -139,6 +152,25 @@ class PhpErrorHandler
     }
 
     /**
+     * This will cancelled the handler
+     * Changing settings of this class will throw Exceptions if is cancelled
+     */
+    public function cancel()
+    {
+        $this->requireActiveState();
+        $this->isCancelled = true;
+        restore_error_handler();
+    }
+
+    /**
+     * @return bool
+     */
+    public function isCancelled() : bool
+    {
+        return $this->isCancelled;
+    }
+
+    /**
      * @return bool
      */
     public function hasDebug(): bool
@@ -153,7 +185,9 @@ class PhpErrorHandler
      */
     public function setDebug(bool $debug)
     {
+        $this->requireActiveState();
         $this->debug = $debug;
+        $this->configureDisplayErrors();
 
         return $this;
     }
@@ -173,7 +207,30 @@ class PhpErrorHandler
      */
     public function setStrict(bool $strict)
     {
+        $this->requireActiveState();
         $this->strict = $strict;
+
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function getDisplayErrors(): bool
+    {
+        return $this->setDisplayErrors;
+    }
+
+    /**
+     * @param bool $displayErrors
+     *
+     * @return $this
+     */
+    public function setDisplayErrors(bool $displayErrors)
+    {
+        $this->requireActiveState();
+        $this->setDisplayErrors = $displayErrors;
+        $this->configureDisplayErrors();
 
         return $this;
     }
@@ -193,6 +250,7 @@ class PhpErrorHandler
      */
     public function setErrorCallback($errorCallback)
     {
+        $this->requireActiveState();
         $this->errorCallback = $errorCallback;
 
         return $this;
@@ -213,6 +271,7 @@ class PhpErrorHandler
      */
     public function setFatalErrorCallback($fatalErrorCallback)
     {
+        $this->requireActiveState();
         $this->fatalErrorCallback = $fatalErrorCallback;
 
         return $this;
@@ -233,6 +292,7 @@ class PhpErrorHandler
      */
     public function setUnrecoverableErrorCallback($unrecoverableErrorCallback)
     {
+        $this->requireActiveState();
         $this->unrecoverableErrorCallback = $unrecoverableErrorCallback;
 
         return $this;
@@ -253,9 +313,60 @@ class PhpErrorHandler
      */
     public function setErrorLogger($errorLogger)
     {
+        $this->requireActiveState();
         $this->errorLogger = $errorLogger;
 
         return $this;
+    }
+
+    /**
+     * Throws an exception if not active
+     *
+     * @throws PhpErrorException
+     */
+    private function requireActiveState()
+    {
+        if ($this->isCancelled()) {
+            throw new PhpErrorException('This error handler has been cancelled.');
+        }
+    }
+
+    /**
+     * if the handler is set to configured error reporting :
+     * Error will be displayed with debug mode, hidden otherwise
+     */
+    private function configureDisplayErrors()
+    {
+
+        if (!$this->getDisplayErrors()) {
+            return;
+        }
+
+        if ($this->hasDebug()) {
+            ini_set('display_errors', 'On');
+
+            if (php_sapi_name() === 'cli') {
+                if ($this->previousErrorLogSettings !== null) {
+                    ini_set('error_log', $this->previousErrorLogSettings);
+                }
+            }
+
+            error_reporting(-1);
+
+        } else {
+            ini_set('display_errors', 'Off');
+
+            if (php_sapi_name() === 'cli') {
+
+                if ($this->previousErrorLogSettings === null) {
+                    $this->previousErrorLogSettings = ini_get('error_log');
+                }
+
+                ini_set('error_log', '/dev/null');
+            }
+
+            error_reporting(0);
+        }
     }
 
     /**
@@ -284,6 +395,10 @@ class PhpErrorHandler
         int $errorLine
     ) : bool
     {
+
+        if ($this->isCancelled) {
+            return false;
+        }
 
         /*if strict mode is enabled, non-fatal error are converted in fatal error*/
 
@@ -360,12 +475,8 @@ class PhpErrorHandler
         int $errorLine
     ) {
 
-        /*dismiss all output previously generated if debug not enabled*/
-
-        if ($this->hasDebug()) {
-            ob_end_flush();
-        } else {
-            ob_end_clean();
+        if ($this->isCancelled) {
+            return;
         }
 
         /*log error if logger is available*/
@@ -374,59 +485,95 @@ class PhpErrorHandler
             $this->logError($errorType, $errorMessage, $errorFile, $errorLine);
         }
 
-        if (!$this->hasDebug()) {
+        /*dismiss all output previously generated if debug not enabled*/
+
+        if ($this->hasOutputBuffer()) {
+            if ($this->hasDebug()) {
+                ob_end_flush();
+            } else {
+                ob_end_clean();
+            }
+        }
+
+        if (!$this->hasDebug() && $this->hasOutputBuffer()) {
+
             ob_start();
 
             /*at that point, the error handler assume another fatal error will
             occured. if not, this message will be dismiss.*/
 
-            if (is_callable($this->getUnrecoverableErrorCallback())) {
-                echo call_user_func($this->getUnrecoverableErrorCallback());
-            } else {
-                echo self::DEFAULT_UNRECOVERABLE_ERROR_MESSAGE;
-            }
+            echo $this->getUnrecoverableMessage();
         }
 
         /*call fatal error callback if available*/
 
-        if (is_callable($this->getFatalErrorCallback())) {
+        if (!is_callable($this->getFatalErrorCallback())) {
 
+            if (!$this->hasOutputBuffer()) {
+                echo $this->getUnrecoverableMessage();
+
+                if (php_sapi_name() === 'cli') {
+                    echo PHP_EOL;
+                }
+            }
+
+            return;
+        }
+
+        if ($this->hasOutputBuffer()) {
             if (!$this->hasDebug()) {
                 ob_start(function () {
                     null;
                 });
             }
-
-            $errorString = $this->formatErrorString(
-                $errorType,
-                $errorMessage,
-                $errorFile,
-                $errorLine
-            );
-
-            $handlerResponse = call_user_func(
-                $this->fatalErrorCallback,
-                new PhpFatalErrorException(
-                    $errorString,
-                    $errorType
-                )
-            );
-
-            if (!$this->hasDebug()) {
-
-                $handlerResponse = ob_get_contents() . $handlerResponse;
-
-                ob_end_clean();
-
-                /*we also clean the unrecoverable error message, if we don't
-                reached this line, the message will be displayed (php hack to
-                handle second layer error)*/
-
-                ob_end_clean();
-            }
-
-            echo $handlerResponse;
         }
+
+        $errorString = $this->formatErrorString(
+            $errorType,
+            $errorMessage,
+            $errorFile,
+            $errorLine
+        );
+
+        $handlerResponse = call_user_func(
+            $this->fatalErrorCallback,
+            new PhpFatalErrorException(
+                $errorString,
+                $errorType
+            )
+        );
+
+        if ($this->hasOutputBuffer() && !$this->hasDebug()) {
+
+            $handlerResponse = ob_get_contents() . $handlerResponse;
+
+            ob_end_clean();
+
+            /*we also clean the unrecoverable error message, if we don't
+            reached this line, the message will be displayed (php hack to
+            handle second layer error)*/
+
+            ob_end_clean();
+        }
+
+        echo $handlerResponse;
+    }
+
+    /**
+     * @return mixed|string
+     */
+    private function getUnrecoverableMessage()
+    {
+
+        if (is_callable($this->getUnrecoverableErrorCallback())) {
+            $output = call_user_func($this->getUnrecoverableErrorCallback());
+
+            if (is_string($output) || is_null($output)) {
+                return (string)$output;
+            }
+        }
+
+        return self::DEFAULT_UNRECOVERABLE_ERROR_MESSAGE;
     }
 
     /**
@@ -435,7 +582,6 @@ class PhpErrorHandler
      */
     private function onExecutionEnd()
     {
-
         if ($this->isShuttingDown) {
             return;
         }
@@ -684,5 +830,13 @@ class PhpErrorHandler
             LogLevel::ALERT,
             LogLevel::EMERGENCY,
         ], true);
+    }
+
+    /**
+     * @return bool
+     */
+    private function hasOutputBuffer()
+    {
+        return php_sapi_name() !== 'cli';
     }
 }
