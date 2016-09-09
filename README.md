@@ -15,22 +15,22 @@ composer require kegi/php-error-handler
   
 ## Debug mode
 
-***disabled** by default*
+_**disabled** by default_
 
  - With debug **enabled**, errors are displayed normally (you are still notifided).
  - With debug **disabled**, all errors are hidden, you are notified and it's your job to return an error message.
 
 ## Strict mode
 
-*(**disabled** by default)*
+_**disabled** by default_
 
-Strict mode will convert all non-fatal error into fatal error.
+Strict mode will convert all non-fatal errors into fatal errors.
 
 ### Complexe error handling runtime
 
-You can execute complexe code if a fatal error is detected. (eg. you can call your errorController, build a response from a template according to the user's language settings...
+You can execute complexe code if a fatal error is detected. (eg. you can call your errorController, build a response from a template according to the user's language settings...)
 
-If an error occured while handling your error... (eg. a fatal error on the core of your app), you'll be notified that an unrecoverable error occured and you'll be able to return an error message (eg. return the content of a static error html page).
+If an other fatal error occured while handling this fatal error... (eg. a fatal error on the core of your app), you'll be notified that an unrecoverable error occured and you'll be able to return an error message (eg. return the content of a static error html page).
 
 
 #How to implement it on your project
