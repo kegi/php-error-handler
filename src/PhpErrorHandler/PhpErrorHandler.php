@@ -479,6 +479,10 @@ class PhpErrorHandler
             return;
         }
 
+        /*set status code to 500*/
+
+        http_response_code(500);
+
         /*log error if logger is available*/
 
         if ($this->getErrorLogger() instanceof LoggerInterface) {
