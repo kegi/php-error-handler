@@ -4,9 +4,17 @@
     "php": ">=7.0",
     "psr/log": "^1.0"
   },
+  "require-dev": {
+    "phpunit/phpunit": "^5.2"
+  },
   "autoload": {
     "psr-4": {
       "KeGi\\PhpErrorHandler\\": "src/PhpErrorHandler"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "KeGi\\PhpErrorHandler\\Tests\\": "tests/PhpErrorHandler"
     }
   }
 }
