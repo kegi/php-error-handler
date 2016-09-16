@@ -513,12 +513,8 @@ class PhpErrorHandler
 
         if (!is_callable($this->getFatalErrorCallback())) {
 
-            if (!$this->hasOutputBuffer()) {
-                echo $this->getUnrecoverableMessage();
-
-                if (php_sapi_name() === 'cli') {
-                    echo PHP_EOL;
-                }
+            if (!$this->hasDebug() && !$this->hasOutputBuffer()) {
+                echo $this->getUnrecoverableMessage() . PHP_EOL;
             }
 
             return;
