@@ -400,20 +400,6 @@ class PhpErrorHandler
             return false;
         }
 
-        /*if strict mode is enabled, non-fatal error are converted in fatal error*/
-
-        if ($this->isStrict()) {
-
-            $errorString = $this->formatErrorString(
-                $errorType,
-                $errorMessage,
-                $errorFile,
-                $errorLine
-            );
-
-            trigger_error('[STRICT MODE] ' . $errorString, E_USER_ERROR);
-        }
-
         /*log error if logger is available*/
 
         if ($this->getErrorLogger() instanceof LoggerInterface) {
@@ -452,6 +438,20 @@ class PhpErrorHandler
             if (is_string($handlerResponse)) {
                 echo $handlerResponse;
             }
+        }
+
+        /*if strict mode is enabled, non-fatal error are converted in fatal error*/
+
+        if ($this->isStrict() && !$this->isFatalError($errorType)) {
+
+            $errorString = $this->formatErrorString(
+                $errorType,
+                $errorMessage,
+                $errorFile,
+                $errorLine
+            );
+
+            trigger_error('[STRICT MODE] ' . $errorString, E_USER_ERROR);
         }
 
         return false;
