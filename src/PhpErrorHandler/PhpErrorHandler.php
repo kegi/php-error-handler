@@ -576,27 +576,27 @@ class PhpErrorHandler
         /*at that point, we're about to display an error (debug is enabled)*/
         /*initialize whoops, that library generate nice stack trace*/
 
-        $whoops = new Run();
-        $whoops->allowQuit(false);
-        $whoops->pushHandler(new PrettyPageHandler());
+        if ($this->hasOutputBuffer()) {
+            $whoops = new Run();
+            $whoops->allowQuit(false);
+            $whoops->pushHandler(new PrettyPageHandler());
 
-        try {
+            try {
 
-            if ($this->strictModeLastFile !== null) {
-                $errorFile = $this->strictModeLastFile;
+                if ($this->strictModeLastFile !== null) {
+                    $errorFile = $this->strictModeLastFile;
+                }
+
+                if ($this->strictModeLastLine !== null) {
+                    $errorLine = $this->strictModeLastLine;
+                }
+
+                $whoops->handleError($errorType, $errorMessage, $errorFile,
+                    $errorLine);
+            } catch (ErrorException $exception) {
+                $whoops->handleException($exception);
             }
-
-            if ($this->strictModeLastLine !== null) {
-                $errorLine = $this->strictModeLastLine;
-            }
-
-            $whoops->handleError($errorType, $errorMessage, $errorFile,
-                $errorLine);
-        } catch (ErrorException $exception) {
-            $whoops->handleException($exception);
         }
-
-        echo '<hr>---';
     }
 
     /**
