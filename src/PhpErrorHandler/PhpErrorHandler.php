@@ -5,6 +5,8 @@ namespace KeGi\PhpErrorHandler;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Throwable;
+use Whoops\Handler\PrettyPageHandler;
+use Whoops\Run;
 
 /**
  * This handler catch all PHP errors
@@ -165,7 +167,7 @@ class PhpErrorHandler
     /**
      * @return bool
      */
-    public function isCancelled() : bool
+    public function isCancelled(): bool
     {
         return $this->isCancelled;
     }
@@ -353,6 +355,12 @@ class PhpErrorHandler
 
             error_reporting(-1);
 
+            /*initialize whoops, that library generate nice stack trace*/
+
+            $whoops = new Run();
+            $whoops->pushHandler(new PrettyPageHandler());
+            $whoops->register();
+
         } else {
             ini_set('display_errors', 'Off');
 
@@ -393,8 +401,7 @@ class PhpErrorHandler
         string $errorMessage,
         string $errorFile,
         int $errorLine
-    ) : bool
-    {
+    ): bool {
 
         if ($this->isCancelled) {
             return false;
@@ -664,8 +671,7 @@ class PhpErrorHandler
         string $errorMessage,
         string $errorFile,
         int $errorLine
-    ) : string
-    {
+    ): string {
         $errorString = 'PHP ' . $this->getErrorType($errorType) . ': '
             . $errorMessage;
 
@@ -689,8 +695,7 @@ class PhpErrorHandler
      */
     private function getErrorType(
         int $errorCode
-    ) : string
-    {
+    ): string {
         switch ($errorCode) {
 
             case E_ERROR:
@@ -756,8 +761,7 @@ class PhpErrorHandler
      */
     private function getErrorLevel(
         int $errorCode
-    ) : string
-    {
+    ): string {
         $uncaught = $this->isShuttingDown;
 
         switch ($errorCode) {
@@ -821,8 +825,7 @@ class PhpErrorHandler
      */
     private function isFatalError(
         int $errorCode
-    ) : bool
-    {
+    ): bool {
         $level = $this->getErrorLevel($errorCode);
 
         return in_array($level, [
