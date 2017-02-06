@@ -5,6 +5,7 @@ namespace KeGi\PhpErrorHandler;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Throwable;
+use Whoops\Exception\ErrorException;
 use Whoops\Handler\PrettyPageHandler;
 use Whoops\Run;
 
@@ -102,6 +103,16 @@ class PhpErrorHandler
      * @var string|null
      */
     private $previousErrorLogSettings;
+
+    /**
+     * @var string|null
+     */
+    private $strictModeLastFile = null;
+
+    /**
+     * @var int|null
+     */
+    private $strictModeLastLine = null;
 
     /**
      * @param bool                 $debug
@@ -355,12 +366,6 @@ class PhpErrorHandler
 
             error_reporting(-1);
 
-            /*initialize whoops, that library generate nice stack trace*/
-
-            $whoops = new Run();
-            $whoops->pushHandler(new PrettyPageHandler());
-            $whoops->register();
-
         } else {
             ini_set('display_errors', 'Off');
 
@@ -457,6 +462,9 @@ class PhpErrorHandler
                 $errorFile,
                 $errorLine
             );
+
+            $this->strictModeLastFile = $errorFile;
+            $this->strictModeLastLine = $errorLine;
 
             trigger_error('[STRICT MODE] ' . $errorString, E_USER_ERROR);
         }
@@ -564,6 +572,31 @@ class PhpErrorHandler
         }
 
         echo $handlerResponse;
+
+        /*at that point, we're about to display an error (debug is enabled)*/
+        /*initialize whoops, that library generate nice stack trace*/
+
+        $whoops = new Run();
+        $whoops->allowQuit(false);
+        $whoops->pushHandler(new PrettyPageHandler());
+
+        try {
+
+            if ($this->strictModeLastFile !== null) {
+                $errorFile = $this->strictModeLastFile;
+            }
+
+            if ($this->strictModeLastLine !== null) {
+                $errorLine = $this->strictModeLastLine;
+            }
+
+            $whoops->handleError($errorType, $errorMessage, $errorFile,
+                $errorLine);
+        } catch (ErrorException $exception) {
+            $whoops->handleException($exception);
+        }
+
+        echo '<hr>---';
     }
 
     /**
