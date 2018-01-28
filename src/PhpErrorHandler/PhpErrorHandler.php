@@ -577,25 +577,36 @@ class PhpErrorHandler
         /*initialize whoops, that library generate nice stack trace*/
 
         if ($this->hasOutputBuffer()) {
+
+            /*remove any buffer before showing whoops error*/
+
+            for ($i = 0; $i < ob_get_level(); $i++) {
+                ob_end_clean();
+            }
+
             $whoops = new Run();
             $whoops->allowQuit(false);
             $whoops->pushHandler(new PrettyPageHandler());
 
-            try {
-
-                if ($this->strictModeLastFile !== null) {
-                    $errorFile = $this->strictModeLastFile;
-                }
-
-                if ($this->strictModeLastLine !== null) {
-                    $errorLine = $this->strictModeLastLine;
-                }
-
-                $whoops->handleError($errorType, $errorMessage, $errorFile,
-                    $errorLine);
-            } catch (ErrorException $exception) {
-                $whoops->handleException($exception);
+            if ($this->strictModeLastFile !== null) {
+                $errorFile = $this->strictModeLastFile;
             }
+
+            if ($this->strictModeLastLine !== null) {
+                $errorLine = $this->strictModeLastLine;
+            }
+
+            /*show whoops error stack*/
+
+            $whoops->handleException(
+                new ErrorException(
+                    $errorMessage,
+                    $errorType,
+                    $errorType,
+                    $errorFile,
+                    $errorLine
+                )
+            );
         }
     }
 
