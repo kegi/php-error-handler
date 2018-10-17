@@ -576,7 +576,7 @@ class PhpErrorHandler
         /*at that point, we're about to display an error (debug is enabled)*/
         /*initialize whoops, that library generate nice stack trace*/
 
-        if ($this->hasOutputBuffer()) {
+        if ($this->hasDebug() && $this->hasOutputBuffer()) {
 
             /*remove any buffer before showing whoops error*/
 
